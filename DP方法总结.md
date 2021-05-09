@@ -185,7 +185,54 @@ class Main{
 
 ###### 416. 分割等和子集
 
+<img src="DP方法总结.assets/image-20210509111600776.png" alt="image-20210509111600776" style="zoom:80%;" />
 
+- 0 - 1背包问题
+
+- ```java
+  // 完全当成0-1背包
+  class Solution {
+      public boolean canPartition(int[] nums) {
+          int sum = 0;
+          for (int num : nums) {
+              sum += num;
+          }
+          if ((sum & 1) == 1) return false;
+          sum /= 2;
+          int[] dp = new int[sum + 1];
+          for (int i = 1; i <= nums.length; ++ i) {
+              for (int j = sum; j >= nums[i - 1]; -- j) {
+                  dp[j] = Math.max(dp[j], dp[j - nums[i - 1]] + nums[i - 1]);
+              }
+          }
+          if (dp[sum] == sum) return true;
+          else return false;
+      }
+  }
+  ```
+
+- ```java
+  class Solution {
+      public boolean canPartition(int[] nums) {
+          int sum = 0;
+          for (int num : nums) {
+              sum += num;
+          }
+          if ((sum & 1) == 1) return false;
+          sum /= 2;
+          int[] dp = new int[sum + 1];
+          dp[0] = 1;
+          for (int i = 1; i <= nums.length; ++ i) {
+              for (int j = sum; j >= nums[i - 1]; -- j) {
+                  dp[j] += dp[j - nums[i - 1]];
+              }
+          }
+          return dp[sum] != 0;
+      }
+  }
+  ```
+
+- 
 
 ###### 474. 一和零
 
@@ -577,7 +624,15 @@ class Solution {
 
 ###### 5. 最长回文子串
 
+<img src="DP方法总结.assets/image-20210507000752823.png" alt="image-20210507000752823" style="zoom:80%;" />
+
 - 状态表示：`dp[i][j]`，其中`i、j`就是字符串中的下标，取值 `0 - n - 1`，代表`s[i..j]`是否是回文子串
+
+- 状态计算：之前发现的一个很精妙的转移方程
+
+  - `dp[i][j] = (cs[i] == cs[j]) && dp[i + 1][j - 1];`
+  - 由于转移方程的方向问题，由左下角状态转移而来，因此`i`要从大到小遍历，或者说按照区间dp的方式，先遍历len
+  - 注意：`dp[i + 1][j - 1]`可能会导致 `i + 1 > j - 1`的情况，因此有两种解决方案，一是特判 `i + 1 == j`的情况，二是将`dp`数组全部初始化为`true`
 
 - ```java
   public class Solution {
@@ -590,6 +645,9 @@ class Solution {
           int len = 1;
           for (int i = n - 1; i >= 0; i--) {
               for (int j = i + 1; j < n; j++) {
+                  // 这里可以选择不把dp全部初始化为true，而是在下面多判断一项
+                  // dp[i][j] = cs[i] == cs[j] && (dp[i + 1][j - 1] || i + 1 > j - 1)
+                  // 同时遍历的i、j取值也要重新考虑，可以看131. 分割回文串中的dp
                   dp[i][j] = (cs[i] == cs[j]) && dp[i + 1][j - 1];
                   if (dp[i][j] && len < j - i + 1) {
                       start = i;
@@ -600,17 +658,103 @@ class Solution {
           return s.substring(start, start + len);
       }
   }
+  public class Solution {
+      public String longestPalindrome(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length;
+          boolean[][] dp = new boolean[n + 1][n + 1];
+          for (boolean[] arr : dp) Arrays.fill(arr, true);
+          int start = 0;
+          int maxLen = 1;
+          for (int len = 2; len <= n; ++ len) {
+              for (int i = 1; i  + len - 1 <= n; ++ i) {
+                  int j = i + len - 1;
+                  dp[i][j] = cs[i - 1] == cs[j - 1] && dp[i + 1][j - 1];
+                  if (dp[i][j]) {
+                      start = i - 1;
+                      maxLen = len;
+                  }
+              }
+          }
+          return s.substring(start, start + maxLen);
+      }
+  }
+  ```
+  
+- 用dp做这题很慢，中心扩展法或者马拉车算法更高效（其中马拉车算法比较复杂，暂没看）
+
+- 采用中心扩展法
+
+- ```java
+  // 这种中心扩展法比较容易想，并且比较容易写
+  // 即遍历每个字符时，先找到一段区间内都是该字符的情况，在都是同一字符的该区间基础上再左右扩展
+  // 这种写法就包括了下一种写法中回文串是偶数的情况（即中心点在两个数之间，是偶数的话，最中心肯定是两个以上相同的数）
+  public class Solution {
+      public String longestPalindrome(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length, len = 1, start = 0;
+          for (int i = 0; i < n; ++ i) {
+              // 这一句是自己想出来的优化，这个优化很关键！
+              if (i > 0 && cs[i] == cs[i - 1]) continue;
+              int l = i - 1, r = i + 1;
+              while (l >= 0 && cs[l] == cs[i]) l--;
+              while (r < n && cs[r] == cs[i]) r++;
+              while (l >= 0 && r < n && cs[l] == cs[r]) {
+                  l--;
+                  r++;
+              }
+              if (r - l - 1 > len) {
+                  len = r - l - 1;
+                  start = l + 1;
+              }
+          }
+          return s.substring(start, start + len);
+      }
+  }
   ```
 
-- 
+- ```java
+  // 另一种中心扩展的方法，是官解和大多数解法的写法，比较麻烦
+  // 分别考虑回文子串为奇数和偶数的情况，即中心是在字符上，还是字符之间
+  public class Solution {
+      public String longestPalindrome(String s) {
+          int n = s.length(), start = 0, maxLen = 1;
+          for (int i = 0; i < n; ++ i) {
+              int len1 = expandAroundCenter(s, i, i);
+              int len2 = expandAroundCenter(s, i, i + 1);
+              int len = Math.max(len1, len2);
+              if (len > maxLen) {
+                  maxLen = len;
+                  // 这里(len - 1) / 2中 - 1 是为了偶数情况下，i是中心（字符之间）的左边字符，因此减去的一半长应该少1
+                  start = i - (len - 1) / 2;
+              }
+          }
+          return s.substring(start, start + maxLen);
+      }
+  
+      public int expandAroundCenter(String s, int left, int right) {
+          while (left >= 0 && right < s.length() && s.charAt(left) == s.charAt(right)) {
+              left--;
+              right++;
+          }
+          return right - left - 1;
+      }
+  }
+  ```
+
+
 
 ###### 516. 最长回文子序列
 
-- 
+<img src="DP方法总结.assets/image-20210506180636386.png" alt="image-20210506180636386" style="zoom: 77%;" />
 
-- a
+- 状态表示：正常的区间表示`dp[i][j]`表示`s[i..j]`中最长的回文子序列
 
-- a
+- 状态计算：根据左右两端的元素是否相等来划分子集，容易得出转移方程
+
+- 如果for循环里采用区间dp的方式，即先遍历长度再遍历左端点坐标，那就是通用的区间dp循环方式
+
+- 初始化，`[i..j]`区间只有1个字符时，最长子序列长度即为1
 
 - ```java
   // 和其他区间DP问题一样，先遍历区间长度len
@@ -620,7 +764,9 @@ class Solution {
           int n = cs.length;
           int[][] dp = new int[n + 1][n + 1];
   
+          // 初始化
           for (int i = 0; i < n; i++) dp[i][i] = 1;
+          
           for (int len = 2; len <= n; ++ len) {
               for (int i = 0; i + len - 1 < n; ++ i) {
                   int j = i + len - 1;
@@ -632,10 +778,10 @@ class Solution {
       }
   }
   ```
+  
+- 如果不按区间dp的思路来遍历，因为状态转移依靠的是如下图所示的位置，因此可以对i从下往上遍历也可以
 
-- 
-
-- a
+- <img src="DP方法总结.assets/image-20210506182036890.png" alt="image-20210506182036890" style="zoom:80%;" />
 
 - ```java
   class Solution {
@@ -659,7 +805,272 @@ class Solution {
   }
   ```
 
-- 
+
+
+###### 647. 回文子串
+
+<img src="DP方法总结.assets/image-20210506210920935.png" alt="image-20210506210920935" style="zoom:80%;" />
+
+- 按照区间DP 5. 最长回文子串和 516. 最长回文子序列中对回文串判断的DP方法
+
+- 经典回文转移方程`dp[i][j] = cs[i] == cs[j] && dp[i + 1][j - 1]`
+
+- ```java
+  // 该方法在lc中实测效率并不高
+  class Solution {
+      public int countSubstrings(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length, ans = n;
+  
+          boolean[][] dp = new boolean[n + 1][n + 1];
+          for (boolean[] arr : dp) Arrays.fill(arr, true);
+  
+          for (int len = 2; len <= n; ++ len) {
+              for (int i = 1; i + len - 1 <= n; ++ i) {
+                  int j = i + len - 1;
+                  dp[i][j] = cs[i - 1] == cs[j - 1] && dp[i + 1][j - 1];
+                  if (dp[i][j]) ans ++;
+              }
+          }
+  
+          return ans;
+      }
+  }
+  ```
+
+- 中心扩展法
+
+- ```java
+  // 第一种自己比较喜欢的中心扩展
+  class Solution {
+      public int countSubstrings(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length, ans = 0;
+          for (int i = 0; i < n; ++ i) {
+              // 每次遍历一个字符时就先加1，即单字符作为回文子串
+              ans++;
+              int l = i - 1, r = i + 1;
+              // 每个字符，只计算当前字符以及之后的字符可能组成的偶数回文串个数，因此左边不再累加
+              while (l >= 0 && cs[l] == cs[i]) {
+                  if (cs[i] == cs[i - 1]) break;
+                  l--;
+                  ans++;
+              }
+              // 以"aaaa"为例，i == 1时，"a,aa,aaa,aaaa"都计算到,i == 2时，"a,aa,aaa"，i == 3时，"a,aa"
+              // i == 4时，"a"
+              // 每个字符，只计算当前字符以及之后的字符可能组成的偶数回文串个数，因此右边继续累加
+              while (r < n && cs[r] == cs[i]) {
+                  r++;
+                  ans++;
+              }
+              while (l >= 0 && r < n && cs[l] == cs[r]) {
+                  l--;
+                  r++;
+                  ans++;
+              }
+          }
+          return ans;    
+      }
+  }
+  ```
+
+- ```java
+  // 另一种中心扩展法
+  class Solution {
+      public int countSubstrings(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length, len = 1, start = 0, ans = 0;
+          for (int i = 0; i < n; ++ i) {
+              ans += expandAroundCenter(s, i, i);
+              ans += expandAroundCenter(s, i, i + 1);
+          }
+          return ans;
+      }
+  
+      public int expandAroundCenter(String s, int left, int right) {
+          int res = 0;
+          while (left >= 0 && right < s.length() && s.charAt(left) == s.charAt(right)) {
+              res++;
+              left--;
+              right++;
+          }
+          return res;
+      }
+  }
+  ```
+
+
+
+###### 131. 分割回文串
+
+<img src="DP方法总结.assets/image-20210507004724225.png" alt="image-20210507004724225" style="zoom:80%;" />
+
+- 同样的回文dp套路
+- 加上简单的回溯思路
+
+```java
+class Solution {
+    List<List<String>> ans;
+    boolean[][] dp;
+
+    public List<List<String>> partition(String s) {
+        int n = s.length();
+        char[] cs = s.toCharArray();
+        dp = new boolean[n + 1][n + 1];
+        ans = new ArrayList<>();
+
+        // 这边没有把dp数组全部初始化为true，优化了一下转移方程
+        for (int len = 1; len <= n; ++ len) {
+            for (int i = 1; i + len - 1 <= n; ++ i) {
+                int j = i + len - 1;
+                dp[i][j] = cs[i - 1] == cs[j - 1] && (i + 1 > j - 1 || dp[i + 1][j - 1]);
+            }
+        }
+        backTrace(cs, new ArrayList<String>(), 1);
+        return ans;
+    }
+
+    public void backTrace(char[] cs, ArrayList<String> path, int start){
+        if (start > cs.length) {
+            ans.add(new ArrayList<String>(path));
+            return;
+        }
+        for (int i = start; i <= cs.length; ++ i) {
+            if (dp[start][i]) {
+                path.add(new String(cs, start - 1, i + 1 - start));
+                backTrace(cs, path, i + 1);
+                path.remove(path.size() - 1);
+            }
+        }
+    }
+}
+```
+
+
+
+###### 132. 分割回文串II(第二次dp类似LIS变种)
+
+<img src="DP方法总结.assets/image-20210507004745573.png" alt="image-20210507004745573" style="zoom:80%;" />
+
+- 在得到回文dp判断数组的基础上，再次使用dp
+
+- 新设dp数组`ans[i]`，代表`s[1..i]`的最少分割次数
+
+- 状态计算：
+
+  - 考虑最后一个不同点，`s[i]`添加进去之后，可能与之前的任意位置`j`之间`[j..i]`形成新的回文子串，即有可能能划分成成 `i - 1`个子集
+  - `ans[i] = Math.min(ans[i], ans[j] + 1), if dp[j + 1][i] == true, j∈[1, i - 1]`
+
+- 初始化
+
+  - 如果`dp[1][i] == true`，则`ans[i]`很明显直接为1即可
+  - 并且，因为是求最小值，所以一开始将`ans`数组全部初始化为最大值，也可以初始化为`n`，因为最少分割次数最大就是`n - 1`
+
+- ```java
+  class Solution {
+      public int minCut(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length;
+          int[] ans = new int[n + 1];
+          boolean[][] dp = new boolean[n + 1][n + 1];
+  
+          for (int len = 1; len <= n; ++ len) {
+              for (int i = 1; i +len - 1 <= n; ++ i) {
+                  int j = i + len - 1;
+                  dp[i][j] = cs[i - 1] == cs[j - 1] && (i + 1 > j - 1 || dp[i + 1][j - 1]);
+              }
+          }
+  
+          Arrays.fill(ans, n);
+          // 注意[1..i]是回文串不代表中间所有的[1..j] j < i 都是回文串
+          for (int i = 1; i <= n; ++ i) {
+              if (dp[1][i]) {
+                  ans[i] = 0;
+              } else {
+                  for (int j = 1; j < i; ++ j) {
+                      if (dp[j + 1][i]) {
+                          ans[i] = Math.min(ans[i], ans[j] + 1);
+                      }
+                  }
+              }
+          }
+  
+          return ans[n];
+      }
+  }
+  ```
+
+- 用中心扩展法思路解决该题，求最少分割次数，也就是让每个中心扩展出的回文子串最长
+
+- 自己之前几题喜欢用的那种中心扩展法这里会WA
+
+- ```java
+  // WA代码
+  class Solution {
+      public int minCut(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length;
+          int[] dp = new int[n];
+  
+          Arrays.fill(dp, n);
+          dp[0] = 0;
+          // 中心扩展法
+          for (int i = 0; i < n; ++ i) {
+              if (i > 0 && cs[i] == cs[i - 1]) continue; 
+              int l = i - 1, r = i + 1;
+              while (l >= 0 && cs[l] == cs[i]) {
+                  // if (cs[i] == cs[i - 1]) break;
+                  l--;
+              }
+              while (r < n && cs[r] == cs[i]) {
+                  r++;
+              }
+              while (l >= 0 && r < n && cs[l] == cs[r]) {
+                  l--;
+                  r++;
+              }
+              if (l == -1) dp[r - 1] = 0;
+              else {
+                  dp[r - 1] = Math.min(dp[r - 1], dp[l] + 1);
+              }
+          }
+          return dp[n - 1];
+      }
+  }
+  ```
+
+- 只能用官解用的那种中心扩展法
+
+- 如果以当前字符为中心的最大回文串左侧为`left`，右侧为`right`，那`cs[left..right]`长度是不需要切割的，只需要在`cs[left - 1]`处切一刀即可，即`dp[left - 1] + 1`。并且注意当`left == 0`时，`dp[right]`直接等于0，即不需要分割
+
+- ```java
+  class Solution {
+      int[] dp;
+      public int minCut(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length;
+          dp = new int[n];
+  
+          Arrays.fill(dp, n);
+          // 中心扩展法
+          for (int i = 0; i < n; ++ i) {
+              expandAroundCenter(cs, i, i);
+              expandAroundCenter(cs, i, i + 1);
+          }
+          return dp[n - 1];
+      }
+  
+      public void expandAroundCenter(char[] cs, int left, int right) {
+          while (left >= 0 && right < cs.length && cs[left] == cs[right]) {
+              dp[right] = Math.min(dp[right], left == 0 ? 0 : dp[left - 1] + 1);
+              left--;
+              right++;
+          }
+      }
+  }
+  ```
+
+
 
 ###### 87. 扰乱字符串(状态表示很特别)
 
@@ -881,7 +1292,9 @@ class Solution {
     return f[1][n];
     ```
 
-
+> 一个没来得及看的题解，有机会补看一下
+>
+> https://leetcode-cn.com/problems/burst-balloons/solution/chao-xiang-xi-hui-su-dao-fen-zhi-dao-dp-by-niu-you/
 
 ###### 486. 预测赢家
 
@@ -2170,11 +2583,91 @@ class Solution {
 
 ###### 10. 正则表达式匹配
 
+<img src="DP方法总结.assets/image-20210506110306465.png" alt="image-20210506110306465" style="zoom:80%;" />
 
+- 经典双序列字符串dp，状态表示很平常，`dp[i][j]`代表字符串序列`s`能否与正则表达式序列`p`匹配
+
+- 状态计算
+
+  - 最关键的判断条件是当前正则表达式序列上的字符是否为`'*'`
+  - 如果是，有两种可能，一种是不匹配 * 号前的字符，即`dp[i][j - 2]`，另一种是匹配 * 号前的字符，`dp[i - 1][j]`为`true`的同时，`s[i]`要与`t[j - 1]`相等，或者说`t[j - 1]`要为`'.'`
+  - 如果不是，`dp[i - 1][j - 1]`为`true`的同时，`s[i]`要与`t[j]`相等，或者`t[j]`要为`'.'`
+
+- 初始化
+
+  - `dp[0][0] = true`是一个很容易想到的初始化条件，空字符串能被空正则表达式匹配
+  - `dp[0][j] = true`当正则表达式序列为任意字符加`'*'`的形式时，出现0次，即不匹配 * 号的情况也是为`true`的
+
+- 自己之前做这题的过程可以参见剑指offer文件第19题
+
+- ```java
+  class Solution {
+      public boolean isMatch(String s, String p) {
+          char[] cs = s.toCharArray();
+          char[] cp = p.toCharArray();
+          int n = cs.length, m = cp.length;
+          boolean[][] dp = new boolean[n + 1][m + 1];
+  
+          // 初始化
+          dp[0][0] = true;
+          for (int j = 2; j <= m; ++ j) dp[0][j] = dp[0][j - 2] && cp[j - 1] == '*';
+  
+          // 状态计算
+          for (int i = 1; i <= n; ++ i) {
+              for (int j = 1; j <= m; ++ j) {
+                  dp[i][j] = cp[j - 1] == '*' ?
+                      // 当前正则表达式中字符为'*'
+                      // 不匹配 * 和匹配上* 两种可能 
+                      dp[i][j - 2] || dp[i - 1][j] && (cs[i - 1] == cp[j - 2] || cp[j - 2] == '.') :
+                      //  当前正则表达式中字符不为'*'
+                      dp[i - 1][j - 1] && (cs[i - 1] == cp[j - 1] || cp[j - 1] == '.');
+              }
+          }
+  
+          return dp[n][m];
+      }
+  }
+  ```
 
 
 
 ###### 44. 通配符匹配
+
+- 10.正则表达式匹配的简化版，状态表示，状态计算都类似
+
+- 自己曾经写的代码同样可以见LC日记
+
+- ```java
+  class Solution {
+      public boolean isMatch(String s, String p) {
+          char[] cs = s.toCharArray();
+          char[] cp = p.toCharArray();
+          int n = cs.length, m = cp.length;
+          boolean[][] dp = new boolean[n + 1][m + 1];
+  
+          // 初始化
+          dp[0][0] = true;
+          for (int j = 1; j <= m; ++ j) {
+              if (dp[0][j - 1] == false) break;
+              if (cp[j - 1] == '*') {
+                  dp[0][j] = true;
+              }
+          }
+  
+          // 状态计算
+          for (int i = 1; i <= n; ++ i) {
+              for (int j = 1; j <= m; ++ j) {
+                  dp[i][j] = cp[j - 1] == '*' ?
+                      // 不匹配 * 和匹配 *
+                      dp[i][j - 1] || dp[i - 1][j] :
+                      dp[i - 1][j - 1] && (cs[i - 1] == cp[j - 1] || cp[j - 1] == '?');
+              }
+          }
+  
+          return dp[n][m];
+      }
+  }
+  ```
 
 
 
@@ -2358,13 +2851,17 @@ class Main {
 
 ###### 377. 组合总和 IV（考虑顺序）
 
-- 考虑顺序，**先循环容量，再循环物品**（与传统完全背包问题的循环方式不一样）
+- 数可重复使用，组合考虑顺序，**先循环容量，再循环物品**（与传统完全背包问题的循环方式不一样）
 
 与完全背包类似，但不同
 
 >  给你一个由 **不同** 整数组成的数组 `nums` ，和一个目标整数 `target` 。请你从 `nums` 中找出并返回总和为 `target` 的元素组合的个数。请注意，顺序不同的序列被视作不同的组合。（`nums`中数字都为正数）
 >
 >  如果给定的数组中含有负数会发生什么？问题会产生何种变化？如果允许负数出现，需要向题目中添加哪些限制条件？
+
+- 简单思路：可以转换成爬楼梯问题，楼梯的阶数一共为`target`，一次可以走的步数为`nums[i]`。 一共有多少种走法？
+
+- 状态表示：<img src="DP方法总结.assets/image-20210509110637314.png" alt="image-20210509110637314" style="zoom: 67%;" />
 
 - 状态转移方程
 
@@ -2392,6 +2889,8 @@ class Main {
   ```
 
 - 优化
+
+- 状态表示：定义`f[i]`为凑成总和为`i`的方案数是多少
 
   <img src="DP方法总结.assets/image-20210425003545187.png" alt="image-20210425003545187" style="zoom:67%;" />
 
@@ -2502,7 +3001,10 @@ class Solution {
         if (n < m) return 0;
         if (n == m) return s.equals(t) ? 1 : 0;
         int[][] dp = new int[n + 1][m + 1];
+        
+        // 初始化
         for (int i = 0; i <= n ;i++) dp[i][0] = 1;
+        
         for (int i = 1; i <= n; i++) {
             for (int j = 1; j <= m ;j++) {
                 // 这一步的状态计算自己写的时候有问题
@@ -2518,6 +3020,59 @@ class Solution {
 
 
 
+###### 629. K个逆序对数组
+
+<img src="DP方法总结.assets/image-20210506130148230.png" alt="image-20210506130148230" style="zoom:80%;" />
+
+- 状态表示
+
+  - 本题的状态表示很容易想，和题目给出的条件一样
+  - `dp[i][j]`表示`[1...i]`个数，恰好拥有`j`个逆序对的不同数组的个数
+
+- 状态计算
+
+  - 本题的状态计算比较难想到
+  - 考虑最后一个不同点，即加入第`i`个数的情况，`[1..i-1]`这`i - 1`个数已经放好，那么第`i`个数有`i`个可以插入的位置
+  - 考虑这`i`种不同的插入情况，如果插入在最前面，因为`i`这个数字比前面`i-1`个数都要大，因此会多出`i - 1`个逆序对，即`dp[i - 1][j - (i - 1)]`，接着考虑如果插在第一个数和第二个数中间，那么会多出`i - 2`个逆序对，即`dp[i - 1][j - (i - 2)]`，……一直到最后插入在最后，即会多出`0`个逆序对，即`dp[i - 1][j]`。将上述`i`种情况相加，因此可以得到转移方程
+  - 同时要注意到，`j - (i - 1)`必须得 ≥ 0，因此转移方程为
+  - <img src="DP方法总结.assets/image-20210506131607510.png" alt="image-20210506131607510" style="zoom:80%;" />
+  - 这种带有求和符号的状态转移方程通常可以和完全背包的推导方法一样，递推相减来消除求和符号
+  - 利用上述方程写出`dp[i][j - 1]`的合式，两式相减可以得到优化后的转移方程
+  - <img src="DP方法总结.assets/image-20210506132035213.png" alt="image-20210506132035213" style="zoom:80%;" />
+  - 注意，如果 `j < i`，那么最后一项就不存在
+
+- 初始化
+
+  - `dp[i][0] = 1`即`[1..i]`个数，逆序对数量为0时，只能递增排列，因此为1种方案
+  - 此外，`n`个数，两两比较，最多有 `(1 + n - 1) * (n - 1) / 2`种可能，可以设为逆序对个数的上边界
+
+- ```java
+  class Solution {
+      public int kInversePairs(int n, int k) {
+          int MOD = (int)1e9 + 7;
+          // 包含 1 - n 数字，拥有的最多序对的个数
+          // 第1个数和其他n - 1个数有 n - 1 个序对
+          // 第2个数和后面的 n - 2个数有 n - 2 个序对
+          // (1 + .. n - 1) 求和公式
+          int maxK = n * (n - 1) / 2;
+          if(k > maxK) return 0;
+          int[][] dp = new int[n + 1][k + 1];
+  
+          // 初始化
+          for (int i = 1; i <= n; ++ i) dp[i][0] = 1;
+  
+          for (int i = 2; i <= n; ++ i) {
+              int bound = i * (i - 1) / 2;
+              // j <= k 是必要条件，j <= bound 是为了优化加速
+              for (int j = 1; j <= k && j <= bound; ++ j) {
+                  dp[i][j] = (dp[i - 1][j] + dp[i][j - 1]) % MOD;
+                  if (j - i >= 0) dp[i][j] = (dp[i][j] - dp[i- 1][j - i] + MOD) % MOD;
+              }
+          }
+          return dp[n][k];
+      }
+  }
+  ```
 
 
 
@@ -2874,6 +3429,12 @@ class Solution {
 
 
 
+###### 1723. 完成所有工作的最短时间
+
+- 21.5.8每日一题，待完善
+
+
+
 ## 7. 树形DP
 
 树形DP的题用记忆化dfs来写，符合树的递归结构
@@ -3060,7 +3621,7 @@ class Main{
 
 - 一看就能知道可以用前缀和的思路来解决
 
-- 自己写的传统的前缀和思路
+- 自己写的传统的前缀和思路——O(m^2 * n^2)
 
   ```java
   class Solution {
@@ -3095,7 +3656,11 @@ class Main{
 
 - 官解，通过枚举上下边界，在上下边界中构造每一列能形成的矩形，效率比自己写的高不了多少
 
-  - `TreeSet`是有序集合，`ceiling`函数是取天花板上的最小值，`floor`函数是取地板下的最大值
+  - `TreeSet`是有序集合，`ceiling`函数是取天花板上的最小值，`floor`函数是取地板下的最大值，类似于二分查找，nlogn
+
+  - > 三叶题解做法，和官解的思路一致，但讲的更由浅入深，过程也比较清楚
+    >
+    > https://leetcode-cn.com/problems/max-sum-of-rectangle-no-larger-than-k/solution/gong-shui-san-xie-you-hua-mei-ju-de-ji-b-dh8s/
 
   ```java
   class Solution {
@@ -3133,5 +3698,113 @@ class Main{
   }
   ```
 
-- 
+- 另一种dp思路，确定左右边界，通过最大子串和优化
+
+  > 参考：
+  >
+  > https://leetcode-cn.com/problems/max-sum-of-rectangle-no-larger-than-k/solution/363-ju-xing-qu-yu-bu-chao-guo-k-de-zui-d-5a5r/
+  >
+  > https://leetcode-cn.com/problems/max-sum-of-rectangle-no-larger-than-k/solution/javacong-bao-li-kai-shi-you-hua-pei-tu-pei-zhu-shi/
+
+  ```java
+  class Solution {
+      public int maxSumSubmatrix(int[][] matrix, int k) {
+          if (matrix == null || matrix.length == 0 || matrix[0].length == 0)
+              return 0;
+          
+          int row = matrix.length;
+          int col = matrix[0].length;
+       
+          int res = Integer.MIN_VALUE;
+          
+          // 固定左右边界
+          for (int i = 0; i < col; i++) {// 枚举左边界
+              int[] sum = new int[row];
+              for (int j = i; j < col; j++) {// 枚举右边界
+                  // 只针对行进行求和
+                  for (int r = 0; r < row; r++) {
+                      sum[r] += matrix[r][j];
+                  }
+  
+                  int dp = 0;
+                  int max = sum[0];
+                  for (int n : sum) {
+                      // 之前的和都比现在的小了，那还要干嘛
+                      dp = Math.max(n, dp + n);
+                      // 更新max
+                      max = Math.max(dp, max);
+                      // 如果发现最大的已经为k了，直接返回k
+                      if (max == k)
+                          return max;
+                  }
+  
+                  if (max < k) {
+                      res = Math.max(max, res);
+                  }
+                  else {
+                      // 暴力做法，分别枚举左边界和右边界
+                      for (int a = 0; a < row; a++) {
+                          int currSum = 0;
+                          for (int b = a; b < row; b++) {
+                              currSum += sum[b];
+                              if (currSum <= k)
+                                  res = Math.max(currSum, res);
+                          }
+                      }
+                      // 如果发现最大的已经为k了，直接返回k
+                      if (res == k) return res;
+                  }
+              }
+          }
+          return res;
+      }
+  }
+  // 等价代码
+  class Solution {
+      public int maxSumSubmatrix(int[][] matrix, int k) {
+          int rows = matrix.length, cols = matrix[0].length, max = Integer.MIN_VALUE;
+          // O(cols ^ 2 * rows)
+          for (int l = 0; l < cols; l++) { // 枚举左边界
+              int[] rowSum = new int[rows]; // 左边界改变才算区域的重新开始
+              for (int r = l; r < cols; r++) { // 枚举右边界
+                  for (int i = 0; i < rows; i++) { // 按每一行累计到 dp
+                      rowSum[i] += matrix[i][r];
+                  }
+                  max = Math.max(max, dpmax(rowSum, k));
+                  if (max == k) return k; // 尽量提前
+              }
+          }
+          return max;
+      }
+      // 在数组 arr 中，求不超过 k 的最大值
+      private int dpmax(int[] arr, int k) {
+          // 最大连续子串和
+          int rollSum = arr[0], rollMax = rollSum;
+          // O(rows)
+          for (int i = 1; i < arr.length; i++) {
+              if (rollSum > 0) rollSum += arr[i];
+              else rollSum = arr[i];
+              if (rollSum > rollMax) rollMax = rollSum;
+          }
+          if (rollMax <= k) return rollMax;
+  
+          // 矩形区域的最大和一定 > k了
+          // O(rows ^ 2)
+          int max = Integer.MIN_VALUE;
+          // 暴力做法，枚举左边界和右边界
+          for (int l = 0; l < arr.length; l++) {
+              int sum = 0;
+              for (int r = l; r < arr.length; r++) {
+                  sum += arr[r];
+                  if (sum > max && sum <= k) max = sum;
+                  // 这句不能删，因为虽然矩形区域的最大和一定 > k，但是可能存在一个矩形区域的和恰好为k的（该矩形区域和k非最大）
+                  if (max == k) return k; // 尽量提前
+              }
+          }
+          return max;
+      }
+  }
+  ```
+
+  
 
