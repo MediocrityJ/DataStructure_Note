@@ -86,9 +86,9 @@ DP问题，本质上是求有限集合中的最值（集合中元素数量一般
 
   **推导过程**：
 
-  F[i, v] = max{F[i - 1, v], F[i - 1, v - C<sub>i</sub>] + W<sub>i</sub>, F[i - 1, v - 2C<sub>i</sub>] + 2W<sub>i</sub>, ……} (1)
-
-  F[i, v - C<sub>i</sub>] = max{		  F[i - 1, v - C<sub>i</sub>], 		 F[i - 1, v - 2C<sub>i</sub>] + Wi, 	F[i - 1, v - 3C<sub>i</sub>] + 2W<sub>i</sub>, ……} (2)
+  > F[i, v] = max{F[i - 1, v], F[i - 1, v - C<sub>i</sub>] + W<sub>i</sub>, F[i - 1, v - 2C<sub>i</sub>] + 2W<sub>i</sub>, ……} (1)
+>
+  > F[i, v - C<sub>i</sub>] = max{		  F[i - 1, v - C<sub>i</sub>], 		 F[i - 1, v - 2C<sub>i</sub>] + Wi, 	F[i - 1, v - 3C<sub>i</sub>] + 2W<sub>i</sub>, ……} (2)
 
   将(2)式加上一个W<sub>i</sub>，则(1)式中等式右边除了第一项F[i - 1, v]之外，后面的式子就等于(2)式+W<sub>i</sub>，即得到优化后的状态方程
 
@@ -221,6 +221,8 @@ class Main{
           if ((sum & 1) == 1) return false;
           sum /= 2;
           int[] dp = new int[sum + 1];
+          // dp[i] 代表方案数，即背包容量为i，装满的方案数
+          // dp[0] 代表什么都不选，方案数为1
           dp[0] = 1;
           for (int i = 1; i <= nums.length; ++ i) {
               for (int j = sum; j >= nums[i - 1]; -- j) {
@@ -231,7 +233,7 @@ class Main{
       }
   }
   ```
-
+  
 - 
 
 ###### 474. 一和零
@@ -2249,7 +2251,9 @@ class Solution {
 
   
 
-###### 
+
+
+
 
 ###### 740. 删除并获得点数（可当做打家劫舍系列问题）
 
@@ -2876,7 +2880,7 @@ class Main {
           f[0][0] = 1;
           int ans = 0;
           for (int i = 1; i <= len; i++) {
-              for (int j = 0; j <= t; j++) {
+              for (int j = 1; j <= t; j++) {
                   for (int u : nums) {
                       if (j >= u) f[i][j] += f[i - 1][j - u];
                   }
@@ -3073,6 +3077,63 @@ class Solution {
       }
   }
   ```
+
+
+
+###### 1269. 停在原地的方案数
+
+<img src="DP方法总结.assets/image-20210513120005582.png" alt="image-20210513120005582" style="zoom:80%;" />
+
+- 状态表示，很容易想到，`dp[i][j]`表示走`i`步可以走到下标为`j`的位置的方案数
+
+- 状态计算：
+
+  - 数组**不是**环形的，也很好计算
+  - `dp[i][j] = dp[i - 1][j] + dp[i - 1][j - 1] + dp[i - 1][j + 1]`，其中`i - 1`和`j + 1`必须是在合法下标
+  - 很明显，第`i`次循环的值只和第`i - 1`次有关，因此可以简化空间代码
+  - 注意在第`i`次循环时，`j`是从小到大遍历的，因此`[j + 1]`的值还是上一层的，即`[i - 1]`的，而`[j - 1]`的值已经被更新过了，是第`i`层的，因此需要提前记录一下，可以只用两个变量即可记录
+
+- 优化的**关键**点，走`i`步，从`0`下标开始最多只能走到下标为`i`的位置，可大大减少循环次数和空间
+
+- ```java
+  class Solution {
+      public int numWays(int steps, int arrLen) {
+          int mod = (int)1e9 + 7;
+          // 关键优化
+          int maxIndex = Math.min(steps >> 1, arrLen - 1);
+          int[] dp = new int[maxIndex + 1];       
+          dp[0] = 1;
+          int pre = 0, cur = 0;
+  
+          for (int i = 1; i <= steps; ++ i) {
+              // 优化
+              int bound = Math.min(maxIndex, i);
+              for (int j = 0; j <= bound; ++ j) {
+                  // 用两个变量即能记录之前的值
+                  cur = dp[j];
+                  if (j - 1 >= 0) {
+                      dp[j] = (dp[j] + pre) % mod;
+                  }
+                  if (j + 1 <= maxIndex) {
+                      dp[j] = (dp[j] + dp[j + 1]) % mod;
+                  }
+                  pre = cur;
+              }
+          }
+          return dp[0];
+      }
+  }
+  ```
+
+- 
+
+
+
+
+
+
+
+
 
 
 
