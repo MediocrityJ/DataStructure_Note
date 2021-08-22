@@ -1694,6 +1694,65 @@ class Solution {
 
 ##### 3.1.2 单序列线性DP
 
+###### 32. 最长有效括号
+
+<img src="DP方法总结.assets/image-20210518132457634.png" alt="image-20210518132457634" style="zoom:80%;" />
+
+- **注**：嵌套的括号也是正确的
+
+- 状态表示：线性DP常用状态表示，`dp[i]`表示以`i`结尾的，`[1..i]`字符串中有效括号的最大长度
+
+- 状态计算：
+
+  - 划分子集：最后一个不同点作为划分依据
+
+    - 当前字符为`(`，直接为0
+
+    - 当前字符为`)`，再次细分
+
+      - 如果前一个字符为`(`，则`dp[i] = dp[i - 2] + 2;`
+
+      - 如果前一个字符为`)`，则要根据`dp[i - 1]`的值，判断`cs[i - 1 - 1 - dp[i - 1]]`位置上的字符
+
+        - 如果该位置上字符为`(`，则`dp[i] = dp[i - 2 - dp[i - 1]] + dp[i - 1] + 2;`
+
+          > 即为`((dp[i - 1]))`这种，最左边`(`位置的左边一个的位置上得到的`dp`值加上`dp[i - 1] + 2`，即为以当前`i`为结尾的最长有效括号长度
+
+        - 如果该位置上字符为`)`，则`dp[i] = 0`，如`)())`，`dp[4] = 0`
+
+- ```java
+  class Solution {
+      public int longestValidParentheses(String s) {
+          char[] cs = s.toCharArray();
+          int n = cs.length;
+          int[] dp = new int[n + 1];
+          int[] left = new int[n + 1];
+          int ans = 0;
+          // 当前字符为')'时，也有可能为0，一开始想错了
+          for (int i = 1; i <= n; ++ i) {
+              if (cs[i - 1] == ')') {
+                  if (i - 2 >= 0 && cs[i - 2] == '(') {
+                      dp[i] = dp[i - 2] + 2;
+                  } else {
+                      if (i - 2 - dp[i - 1] >= 0 && cs[i - 1 - 1 - dp[i - 1]] == '(') {
+                          dp[i] = dp[i - 2 - dp[i - 1]] + dp[i - 1] + 2;
+                      }
+                      // 否则dp[i]就是0，即当前字符为')'时也可能是0
+                      // 一开始想成 Math.max(dp[i - 2 - dp[i - 1]], dp[i - 1]);
+                      // 但是注意状态表示的定义，是必须以i为结尾，因此直接为0即可
+                  }
+              }
+              ans = Math.max(ans, dp[i]);
+          }
+          return ans;
+      }
+  }
+  ```
+
+- 还有其他做法，待补充
+
+
+
 ###### 53. 最大子序和（最大连续子串和）
 
 - 简单dp
@@ -2579,7 +2638,11 @@ class Solution {
 
 
 
+###### 1787. 使所有区间的异或结果为零
 
+<img src="DP方法总结.assets/image-20210525113324502.png" alt="image-20210525113324502" style="zoom:80%;" />
+
+- 问题转化
 
 
 
@@ -2716,6 +2779,111 @@ class Solution {
 
 - <img src="DP方法总结.assets/image-20210427125703432.png" alt="image-20210427125703432" style="zoom: 67%;" />
 - 和1143.里的解释是一样的，直接判断`if (s1[i - 1] == s2[j - 1]) dp[i][j] = dp[i - 1][j - 1];`就行，因为`dp[i - 1][j - 1]`一定比`dp[i - 1][j], dp[i][j - 1]`小，而这里刚好是求`min`
+
+
+
+###### 97. 交错字符串
+
+<img src="DP方法总结.assets/image-20210518161237732.png" alt="image-20210518161237732" style="zoom:80%;" />
+
+- 状态表示：
+
+  自己没怎么想到，看的题解，两个字符串的DP，还是用`dp[i][j]`表示`s1[1..i]`与`s2[1..j]`是否能满足某种性质，这题就是`s1[1..i]`与`s2[1..j]`能否构成`s3[1..i + j]`
+
+- 状态计算：
+
+  - 如果`s1`和`s2`长度加起来和`s3`不等，一定不可能
+
+  - 划分子集：以`s3`中最新的字符是来自于`s1`还是`s2`进行划分
+    - 来自`s1`，`dp[i][j] = dp[i - 1][j] && s3.charAt(i + j - 1) == s1.charAt(i - 1)`
+    - 来自`s2`，`dp[i][j] = dp[i][j - 1] && s3.charAt(i + j - 1) == s2.charAt(j - 1)`
+
+  <img src="DP方法总结.assets/5b5dc439d4ec4bdb35a68607a86558ff8b820e70726eeaf4178dc44a49ea9a33-image.png" alt="image.png" style="zoom: 33%;" />
+
+  ```java
+  // 二维原始DP
+  class Solution {
+      public boolean isInterleave(String s1, String s2, String s3) {
+          int n = s1.length(), m = s2.length();
+          if (n + m != s3.length()) return false;
+          boolean[][] dp = new boolean[n + 1][m + 1];
+          dp[0][0] = true;
+          for (int i = 0; i <= n; ++ i) {
+              for (int j = 0; j <= m; ++ j) {
+                  if (i > 0) {
+                      dp[i][j] = dp[i - 1][j] && (s1.charAt(i - 1) == s3.charAt(i + j - 1));
+                  }
+                  if (j > 0) {
+                      dp[i][j] =  dp[i][j] || (dp[i][j - 1] && (s2.charAt(j - 1) == s3.charAt(i + j - 1)));
+                  }
+              }
+          }
+          return dp[n][m];
+      }
+  }
+  ```
+
+  ```java
+  // 优化空间，一维DP
+  class Solution {
+      public boolean isInterleave(String s1, String s2, String s3) {
+          int n = s1.length(), m = s2.length();
+          if (n + m != s3.length()) return false;
+          boolean[] dp = new boolean[m + 1];
+          dp[0] = true;
+          for (int i = 0; i <= n; ++ i) {
+              for (int j = 0; j <= m; ++ j) {
+                  if (i > 0) {
+                      dp[j] = dp[j] && (s1.charAt(i - 1) == s3.charAt(i + j - 1));
+                  }
+                  if (j > 0) {
+                      dp[j] =  dp[j] || (dp[j - 1] && (s2.charAt(j - 1) == s3.charAt(i + j - 1)));
+                  }
+              }
+          }
+          return dp[m];
+      }
+  }
+  ```
+
+- 记忆化DFS
+
+  - 根据记忆化DFS也可以看出DP的维数，`k`是固定的，等于`i + j`，因此只需要两维
+
+  ```java
+  class Solution {
+      boolean interleave;
+      char[] chars1, chars2, chars3;
+      int len1, len2, len3;
+      boolean[][] visited;
+  
+      public boolean isInterleave(String s1, String s2, String s3) {
+          len1 = s1.length();
+          len2 = s2.length();
+          len3 = s3.length();
+          if (len1 + len2 != len3) return false;
+          visited = new boolean[len1 + 1][len2 + 1];
+          chars1 = s1.toCharArray();
+          chars2 = s2.toCharArray();
+          chars3 = s3.toCharArray();
+          dfs(0, 0, 0);
+          return interleave;
+      }
+  
+      // visited[i][j]代表已经选了s1[1..i]、s2[1..j]这种方案，之后再遇到这种方案就剪枝掉，不用走了
+      private void dfs(int i, int j, int k) {
+          if (k == len3) interleave = true;
+          if (interleave || visited[i][j]) return;
+          if (i < len1 && chars1[i] == chars3[k]) dfs(i + 1, j, k + 1);
+          if (j < len2 && chars2[j] == chars3[k]) dfs(i, j + 1, k + 1);
+          visited[i][j] = true;
+      }
+  }
+  ```
+
+  <img src="DP方法总结.assets/51e7687c873cd0f4d00e7875f0527e4c83ed2fbc87064c152fd2bfceaa572e77-image.png" alt="image.png" style="zoom: 25%;" />
+
+  <img src="DP方法总结.assets/4a156c5953b8ba62766ac0e48a046a774dc9d4cc86a50d5ffd74611d1bc16cd5-image.png" alt="image.png" style="zoom:25%;" />
 
 
 

@@ -332,7 +332,7 @@
 
   
 
-###### 60. 排列序列
+###### 60. 排列序列（第k个排列）
 
 <img src="DFS & 回溯.assets/image-20210516193203434.png" alt="image-20210516193203434" style="zoom:80%;" />
 
@@ -490,6 +490,73 @@
   ```
 
   
+
+###### 1079. 活字印刷
+
+<img src="DFS & 回溯.assets/image-20210517130357277.png" alt="image-20210517130357277" style="zoom:80%;" />
+
+- 当要考虑顺序，不同的顺序代表不同的结果时，就是排列的问题
+
+- 传统排列解法
+
+  - 回溯函数没有显式的结束条件
+  - 只要像47. 一样剪枝一下就行，每次可以进入下一轮回溯就将答案加1就行
+
+  ```java
+  class Solution {
+      int ans = 0;
+      boolean[] isVisited;
+      public int numTilePossibilities(String tiles) {
+          char[] cs = tiles.toCharArray();
+          Arrays.sort(cs);
+          isVisited = new boolean[cs.length];
+          backTrace(cs);
+          return ans;
+      }
+      
+      public void backTrace(char[] cs) {
+          for (int i = 0; i < cs.length; ++ i) {
+              if (isVisited[i]) continue;
+              if (i > 0 && !isVisited[i - 1] && cs[i] == cs[i - 1]) continue;
+              ans ++;
+              isVisited[i] = true;
+              backTrace(cs);
+              isVisited[i] = false;
+          }
+      }
+  }
+  ```
+
+- 一种写的比较简单的，通过计数来回溯的方法
+
+  ```java
+  class Solution {
+      int ans = 0;
+      public int numTilePossibilities(String tiles) {
+          int[] counter = new int[26];
+          for (int i = 0; i < tiles.length(); i++)
+              counter[tiles.charAt(i) - 'A']++;
+          dfs(counter);
+          return ans;
+      }
+      
+      public void dfs(int[] counter) {
+          for (int i = 0; i < 26; i++) {
+              if (counter[i] > 0) {
+                  // 当前情况算一个
+                  ans++;
+                  counter[i]--;
+                  dfs(counter);
+                  counter[i]++;
+              }
+          }
+      }
+  }
+  ```
+
+  
+
+
 
 
 
